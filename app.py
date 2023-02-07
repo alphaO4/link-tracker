@@ -86,7 +86,7 @@ def lure(key):
 
     if existing_log is not None:
         existing_log['count'] += 1
-        save_log(log)
+        save_log(existing_log)
     else:
         log = {
             'time': current_time,
@@ -130,10 +130,10 @@ def track(lure_id):
         'user_agent': request.user_agent.string,
         'country': get_country(request.remote_addr)
     }
-    with open('logs.json', 'r') as f:
+    with open('log.json', 'r') as f:
         logs = json.load(f)
-    logs.append(log)
-    with open('logs.json', 'w') as f:
+    logs.append(logs)
+    with open('log.json', 'w') as f:
         json.dump(logs, f)
     return redirect(lures[lure_id]['redirect_url'], code=302)
 
