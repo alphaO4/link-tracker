@@ -51,9 +51,9 @@ class Decrypt():
 
         # Write the decrypted logs to a file
             logs = Decrypt.get_logs()
-            logs.append(log)
+            logs.append(decrypted_logs)
             with open("out-decrypted.json", "w") as f:
-                json.dump(logs, f, indent=4)
+                json.dump(decrypted_logs, f, indent=4)
 
         return decrypted_logs
 
