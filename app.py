@@ -5,9 +5,10 @@ import json
 import datetime
 import os
 from dotenv import load_dotenv
+from encrypt import encrypt
 
 load_dotenv()
-
+password = input("Password to Encrypt logs with: ")
 app = Flask(__name__)
 current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -81,7 +82,7 @@ def lure(key):
     user_agent = request.headers.get("User-Agent")
     referer = request.headers.get("Referer")
 
-    existing_log = next((log for log in get_logs() if log['ip'] == ip and log['user_agent'] == user_agent), None)
+    existing_log = next((log for log in get_logs() if log['ip'] == str(encrypt.encrypt_logs(ip,password)) and log['user_agent'] == str(encrypt.encrypt_logs(user_agent,password))), None)
 
     if existing_log is not None:
         existing_log['count'] += 1
@@ -89,11 +90,11 @@ def lure(key):
     else:
         log = {
             'time': current_time,
-            'ip': ip,
-            'user_agent': user_agent,
-            'country': get_country(ip),
-            'referer': referer,
-            'redirect_url': redirect_url,
+            'ip': str(encrypt.encrypt_logs(ip,password)),
+            'user_agent': str(encrypt.encrypt_logs(user_agent,password)),
+            'country': str(encrypt.encrypt_logs(get_country(ip),password)),
+            'referer': str(encrypt.encrypt_logs(referer,password)),
+            'redirect_url': str(encrypt.encrypt_logs(redirect_url,password)),
             'count': 1
         }
         save_log(log)
