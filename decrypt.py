@@ -14,10 +14,6 @@ def remove_pad(data):
     pad_len = data[-1]
     return data[:-pad_len]
 
-
-passphrase = "1234"
-
-
 class Decrypt():
     def get_logs():
         try:
@@ -59,4 +55,5 @@ class Decrypt():
 
 
 # Example usage
+passphrase = input("What passphrase was used for this log? ")
 Decrypt.decrypt_logs(passphrase)
