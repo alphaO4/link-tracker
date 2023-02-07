@@ -1,0 +1,33 @@
+<!-- logs.html -->
+<html>
+
+<head>
+    <title>Logs</title>
+</head>
+
+<body>
+    <h1>Logs</h1>
+    <table>
+        <tr>
+            <th>IP</th>
+            <th>Access Time</th>
+            <th>User Agent</th>
+            <th>Country</th>
+            <th>Referer</th>
+            <th>Redirect URL</th>
+        </tr>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log.ip }}</td>
+            <td>{{ log.time }}</td>
+            <td>{{ log.user_agent }}</td>
+            <td>{{ log.country }}</td>
+            <td>{{ log.referer }}</td>
+            <td>{{ log.redirect_url }}</td>
+
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>
