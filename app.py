@@ -7,9 +7,9 @@ import os
 from dotenv import load_dotenv
 from encrypt import encrypt
 
+app = Flask(__name__)
 load_dotenv()
 password = input("Password to Encrypt logs with: ")
-app = Flask(__name__)
 current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def load_lures():
@@ -26,7 +26,7 @@ def save_lures(lures):
         json.dump(lures, f)
 
 def get_country(ip):
-    #get the api key from https://ipgeolocation.io/ and put it into .env file
+    #get the api key from https://ipgeolocation.io/ and put it into a .env file
     API_KEY = os.getenv('API_KEY')
     response = requests.get(f'https://api.ipgeolocation.io/ipgeo?apiKey={API_KEY}&ip={ip}')
     data = response.json()
