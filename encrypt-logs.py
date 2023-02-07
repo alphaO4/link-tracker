@@ -12,13 +12,10 @@ def encrypt_logs(logs, passphrase):
     # Encrypt the padded logs using AES in ECB mode
     cipher = AES.new(hashed_password, AES.MODE_ECB)
     encrypted_logs = cipher.encrypt(padded_logs_json)
-    with open("encrypted_logs.json", "w") as f:
-        json.dump(encrypted_logs, f)
+    return(encrypted_logs)
 
 # Example usage
 logs = [{"ip": "192.168.1.1", "time": "2022-01-01T12:00:00", "user_agent": "Mozilla/5.0", 
-         "country": "US", "referer": "https://example.com", "redirect_url": "https://redirect.com"}, 
-        {"ip": "192.168.1.2", "time": "2022-01-01T12:01:00", "user_agent": "Chrome/80.0", 
-         "country": "UK", "referer": "https://example.com", "redirect_url": "https://redirect.com"}]
+         "country": "US", "referer": "https://example.com", "redirect_url": "https://redirect.com"}]
 passphrase = "1234"
 encrypt_logs(logs, passphrase)
