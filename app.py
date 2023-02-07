@@ -3,6 +3,10 @@ import requests
 import hashlib
 import json
 import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -22,7 +26,7 @@ def save_lures(lures):
 
 def get_country(ip):
     #get the api key from https://ipgeolocation.io/ and put it into .env file
-    API_KEY = file.read(".env").get("API_KEY")
+    API_KEY = os.getenv('API_KEY')
     response = requests.get(f'https://api.ipgeolocation.io/ipgeo?apiKey={API_KEY}&ip={ip}')
     data = response.json()
     try:
