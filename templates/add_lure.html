@@ -6,12 +6,20 @@
 </head>
 
 <body>
+
     <p>Add a Lure</p>
     <form action="/add-lure" method="post">
         <label for="redirect_url">Redirect URL:</label>
         <input type="text" id="redirect_url" name="redirect_url">
         <input type="submit" value="Create Lure">
     </form>
+    <p id="demo"></p>
+
+    <script>
+    let hostname = "https://" + location.hostname + "/" + "{{ lure }}";
+    document.getElementById("demo").innerHTML = hostname;
+    </script>
+
 </body>
 
 </html>

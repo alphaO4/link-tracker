@@ -19,6 +19,14 @@ passphrase = "1234"
 
 
 class Decrypt():
+    def get_logs():
+        try:
+            with open("out-decrypted.json", "r") as f:
+                logs = json.load(f)
+            return logs
+        except:
+            return []
+
     def decrypt_logs(passphrase):
         with open("log.json", "r") as f:
             encrypted_logs = json.load(f)
@@ -42,8 +50,10 @@ class Decrypt():
             decrypted_logs.append(decrypted_log)
 
         # Write the decrypted logs to a file
-        with open("out-decrypted.json", "w") as f:
-            json.dump(decrypted_logs, f)
+            logs = Decrypt.get_logs()
+            logs.append(log)
+            with open("out-decrypted.json", "w") as f:
+                json.dump(logs, f, indent=4)
 
         return decrypted_logs
 
