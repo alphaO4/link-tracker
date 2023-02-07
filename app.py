@@ -21,7 +21,8 @@ def save_lures(lures):
         json.dump(lures, f)
 
 def get_country(ip):
-    API_KEY= '3d363131dd8b4bed90e2e2e7d1936d15'
+    #get the api key from https://ipgeolocation.io/ and put it into .env file
+    API_KEY = file.read(".env").get("API_KEY")
     response = requests.get(f'https://api.ipgeolocation.io/ipgeo?apiKey={API_KEY}&ip={ip}')
     data = response.json()
     try:
