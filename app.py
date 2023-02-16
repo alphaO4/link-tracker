@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect
+from flask import Flask, request, render_template, redirect, jsonify
 import requests
 import hashlib
 import json
@@ -6,11 +6,16 @@ import datetime
 import os
 from dotenv import load_dotenv
 from encrypt import encrypt
-
+from decrypt import decrypt
+from flask_httpauth import HTTPBasicAuth
+from werkzeug.security import generate_password_hash, check_password_hash
+password = ""
 app = Flask(__name__)
+auth = HTTPBasicAuth()
 load_dotenv()
 current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+#users = { "admin" : generate_password_hash(password) }
 
 def load_lures():
     try:
@@ -27,13 +32,18 @@ def save_lures(lures):
     with open("lures.json", "w") as f:
         json.dump(lures, f, indent=4)
 
+def get_decrypt_password(username):
+    for user, password in users.items():
+        if user == username:
+            return password
+    return None
+
 
 def get_country(ip):
     # get the api key from https://ipgeolocation.io/ and put it into a .env file
     API_KEY = os.getenv("API_KEY")
-    response = requests.get(
-        f"https://api.ipgeolocation.io/ipgeo?apiKey={API_KEY}&ip={ip}"
-    )
+    print(API_KEY)
+    response = requests.get(f"https://api.ipgeolocation.io/ipgeo?apiKey={API_KEY}&ip={ip}")
     data = response.json()
     try:
         country = data["country_name"]
@@ -117,6 +127,7 @@ def lure(key):
             "referer": str(encrypt.encrypt_logs(referer, password)),
             "redirect_url": str(encrypt.encrypt_logs(redirect_url, password)),
             "count": 1,
+            "lure" : str(encrypt.encrypt_logs(key, password)),
         }
         save_log(log)
 
@@ -138,13 +149,32 @@ def index():
 
     return render_template("index.html")
 
+#users = { "admin" : generate_password_hash(password) }
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in users:
+        return username
+        
+
 
 @app.route("/logs")
+@auth.login_required
 def logs():
-    logs = get_logs()
-    return render_template("logs.html", logs=logs)
+    encrypted_logs = get_logs()
+    
+    try:
+        #print("Here")        
+        password_d = get_decrypt_password(auth.current_user())
+        decrypted_logs = decrypt.decrypt_logs(password_d)
 
+        return render_template("logs.html", logs=decrypted_logs)
+
+    except Exception as e:
+        print("Error log:",e)
+        return "<h1> Hmm. Something went wrong. Please check the logs!</h1>"
 
 if __name__ == "__main__":
-    password = input("Password to Encrypt logs with: ")
-    app.run(host="0.0.0.0", debug=True)
+   password = input("Password to encrypt logs with: ")
+   users = { "admin" : password }
+   app.run(host="0.0.0.0", debug = True)

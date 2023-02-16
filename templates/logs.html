@@ -36,16 +36,19 @@
             <th>Country</th>
             <th>Referer</th>
             <th>Redirect URL</th>
+            <th>Count</th>
+            <th>Lure</th>
         </tr>
         {% for log in logs %}
         <tr>
-            <td>{{ log.ip }}</td>
+            <td>{{ log.ip.strip('"') }}</td>
             <td>{{ log.time }}</td>
-            <td>{{ log.user_agent }}</td>
-            <td>{{ log.country }}</td>
-            <td>{{ log.referer }}</td>
-            <td>{{ log.redirect_url }}</td>
-
+            <td>{{ log.user_agent.strip('"') }}</td>
+            <td>{{ log.country.strip('"') }}</td>
+            <td>{{ log.referer.strip('"') }}</td>
+            <td>{{ log.redirect_url.strip('"') }}</td>
+            <td>{{ log.count }} </td>
+            <td><a href=http://alpha04.uber.space/{{ log.lure.strip('"') }}>http://alpha04.uber.space/{{ log.lure.strip('"') }}</td>
         </tr>
         {% endfor %}
     </table>

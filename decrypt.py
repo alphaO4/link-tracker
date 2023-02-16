@@ -14,7 +14,11 @@ def remove_pad(data):
     pad_len = data[-1]
     return data[:-pad_len]
 
-class Decrypt():
+
+#passphrase = input("Passphrase used ")
+
+
+class decrypt():
     def get_logs():
         try:
             with open("out-decrypted.json", "r") as f:
@@ -27,6 +31,7 @@ class Decrypt():
         with open("log.json", "r") as f:
             encrypted_logs = json.load(f)
 
+        print("Passwort: " + passphrase)
         # Hash the password to get a key of the correct length for AES
         hashed_password = SHA256.new(passphrase.encode("utf-8")).digest()
 
@@ -46,7 +51,7 @@ class Decrypt():
             decrypted_logs.append(decrypted_log)
 
         # Write the decrypted logs to a file
-            logs = Decrypt.get_logs()
+            logs = decrypt.get_logs()
             logs.append(decrypted_logs)
             with open("out-decrypted.json", "w") as f:
                 json.dump(decrypted_logs, f, indent=4)
@@ -55,5 +60,6 @@ class Decrypt():
 
 
 # Example usage
-passphrase = input("What passphrase was used for this log? ")
-Decrypt.decrypt_logs(passphrase)
+if __name__ == "__main__": 
+    passphrase = input("Passphrase used: ")
+    decrypt.decrypt_logs(passphrase)
