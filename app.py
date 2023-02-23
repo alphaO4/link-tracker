@@ -137,7 +137,7 @@ def lure(key):
 @app.route("/")
 def index():
     # Get information from the client's request
-    access_time = current_time
+    access_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ip = request.remote_addr
     user_agent = request.user_agent.string
     device_type = request.user_agent.platform
