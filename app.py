@@ -111,6 +111,7 @@ def lure(key):
             for log in get_logs()
             if log["ip"] == str(encrypt.encrypt_logs(ip, password))
             and log["user_agent"] == str(encrypt.encrypt_logs(user_agent, password))
+            and log["lure"] == str(encrypt.encrypt_logs(key, password))
         ),
         None,
     )
