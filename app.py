@@ -95,7 +95,6 @@ def add_lure():
 @app.route("/<key>")
 @app.route("/lure/<key>")
 def lure(key):
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     lure = next((l for l in lures if l["id"] == key), None)
     if lure is None:
         return "Invalid lure", 400
@@ -121,7 +120,7 @@ def lure(key):
         save_log(existing_log)
     else:
         log = {
-            "time": current_time,
+            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "ip": str(encrypt.encrypt_logs(ip, password)),
             "user_agent": str(encrypt.encrypt_logs(user_agent, password)),
             "country": str(encrypt.encrypt_logs(get_country(ip), password)),
