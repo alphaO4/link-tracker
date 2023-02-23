@@ -13,7 +13,6 @@ password = ""
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 load_dotenv()
-current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 #users = { "admin" : generate_password_hash(password) }
 
@@ -96,6 +95,7 @@ def add_lure():
 @app.route("/<key>")
 @app.route("/lure/<key>")
 def lure(key):
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     lure = next((l for l in lures if l["id"] == key), None)
     if lure is None:
         return "Invalid lure", 400
