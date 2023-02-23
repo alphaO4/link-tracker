@@ -103,33 +103,17 @@ def lure(key):
     ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
     referer = request.headers.get("Referer")
-
-    existing_log = next(
-        (
-            log
-            for log in get_logs()
-            if log["ip"] == str(encrypt.encrypt_logs(ip, password))
-            and log["user_agent"] == str(encrypt.encrypt_logs(user_agent, password))
-            and log["lure"] == str(encrypt.encrypt_logs(key, password))
-        ),
-        None,
-    )
-
-    if existing_log is not None:
-        existing_log["count"] += 1
-        save_log(existing_log)
-    else:
-        log = {
-            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "ip": str(encrypt.encrypt_logs(ip, password)),
-            "user_agent": str(encrypt.encrypt_logs(user_agent, password)),
-            "country": str(encrypt.encrypt_logs(get_country(ip), password)),
-            "referer": str(encrypt.encrypt_logs(referer, password)),
-            "redirect_url": str(encrypt.encrypt_logs(redirect_url, password)),
-            "count": 1,
-            "lure" : str(encrypt.encrypt_logs(key, password)),
+    log = {
+        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "ip": str(encrypt.encrypt_logs(ip, password)),
+        "user_agent": str(encrypt.encrypt_logs(user_agent, password)),
+        "country": str(encrypt.encrypt_logs(get_country(ip), password)),
+        "referer": str(encrypt.encrypt_logs(referer, password)),
+        "redirect_url": str(encrypt.encrypt_logs(redirect_url, password)),
+        "count": 1,
+        "lure" : str(encrypt.encrypt_logs(key, password)),
         }
-        save_log(log)
+     save_log(log)
 
     return redirect(redirect_url, code=302)
 
