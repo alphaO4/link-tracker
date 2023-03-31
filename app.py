@@ -11,12 +11,15 @@ from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import requests
-
+import base64
 
 password = ""
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 load_dotenv(find_dotenv())
+
+#Set base64 to encode
+encode = base64.b64encode
 
 api_key = os.getenv("API_KEY")
 print("Api Key " + str(api_key))
@@ -47,7 +50,7 @@ cursor.execute(
     access_time TEXT,
     ip TEXT,
     user_agent TEXT,
-    device_typ TEXT,
+    device_type TEXT,
     country TEXT,
     PRIMARY KEY("id" AUTOINCREMENT)
 )"""
@@ -173,13 +176,13 @@ def lure(key):
     referer = request.headers.get("Referer")
     log = {
         "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "ip": str(encrypt.encrypt_logs(ip, password)),
-        "user_agent": str(encrypt.encrypt_logs(user_agent, password)),
-        "country": str(encrypt.encrypt_logs(get_country(ip), password)),
-        "referer": str(encrypt.encrypt_logs(referer, password)),
-        "redirect_url": str(encrypt.encrypt_logs(redirect_url, password)),
+        "ip": encrypt.encrypt_logs(ip, password),
+        "user_agent": encrypt.encrypt_logs(user_agent, password),
+        "country": encrypt.encrypt_logs(get_country(ip), password),
+        "redirect_url": encrypt.encrypt_logs(redirect_url, password),
+        "referer": encrypt.encrypt_logs(referer, password),
         "count": 1,
-        "lure": str(encrypt.encrypt_logs(key, password)),
+        "lure": encrypt.encrypt_logs(key, password),
     }
     save_log(log)
 
@@ -215,19 +218,19 @@ def verify_password(username, password):
 def logs():
     encrypted_logs = get_logs()
 
-    try:
-        # print("Here")
-        password_d = get_decrypt_password(auth.current_user())
-        decrypted_logs = decrypt.decrypt_logs(password_d)
+   # try:
+    # print("Here")
+    password_d = get_decrypt_password(auth.current_user())
+    decrypted_logs = decrypt.decrypt_logs(password_d, encrypted_logs)
 
-        return render_template("logs.html", logs=decrypted_logs)
+    return render_template("logs.html", logs=decrypted_logs)
 
-    except Exception as e:
-        print("Error log:", e)
-        return "<h1> Hmm. Something went wrong. Please check the logs!</h1>"
+  #  except Exception as e:
+ #       print("Error log:", e)
+#        return "<h1> Hmm. Something went wrong. Please check the logs!</h1>"
 
 
 if __name__ == "__main__":
     password = input("Password to encrypt logs with: ")
     users = {"admin": password}
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="0.0.0.0", debug=True, port=8080)

@@ -19,17 +19,9 @@ def remove_pad(data):
 
 
 class decrypt():
-    def get_logs():
-        try:
-            with open("out-decrypted.json", "r") as f:
-                logs = json.load(f)
-            return logs
-        except:
-            return []
 
-    def decrypt_logs(passphrase):
-        with open("log.json", "r") as f:
-            encrypted_logs = json.load(f)
+    def decrypt_logs(passphrase, enlogs):
+        encrypted_logs = enlogs
 
         print("Passwort: " + passphrase)
         # Hash the password to get a key of the correct length for AES
@@ -43,18 +35,12 @@ class decrypt():
                 if field in ["time", "count"]:
                     decrypted_log[field] = log[field]
                 else:
-                    encrypted_field = base64.b64decode(log[field].encode("utf-8"))
+                    encrypted_field = base64.b64decode(log[field])
                     cipher = AES.new(hashed_password, AES.MODE_ECB)
                     decrypted_field = remove_pad(cipher.decrypt(encrypted_field))
                     decrypted_log[field] = decrypted_field.decode("utf-8")
 
             decrypted_logs.append(decrypted_log)
-
-        # Write the decrypted logs to a file
-            logs = decrypt.get_logs()
-            logs.append(decrypted_logs)
-            with open("out-decrypted.json", "w") as f:
-                json.dump(decrypted_logs, f, indent=4)
 
         return decrypted_logs
 
@@ -62,4 +48,4 @@ class decrypt():
 # Example usage
 if __name__ == "__main__": 
     passphrase = input("Passphrase used: ")
-    decrypt.decrypt_logs(passphrase)
+    print(decrypt.decrypt_logs(passphrase))

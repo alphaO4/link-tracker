@@ -10,19 +10,20 @@ def add_pad(data, block_size=16):
     return data + padding
 
 class encrypt():
-    @staticmethod
     def encrypt_logs(logs, passphrase):
         # Hash the password to get a key of the correct length for AES
         hashed_password = SHA256.new(passphrase.encode("utf-8")).digest()
         # Serialize the logs to a JSON string
         logs_json = json.dumps(logs).encode("utf-8")
+        print("logs-json:", logs_json)
+        print("logs-raw:", logs)
         # Pad the logs to a multiple of 16 bytes for AES
         padded_logs_json = add_pad(logs_json)
         # Encrypt the padded logs using AES in ECB mode
         cipher = AES.new(hashed_password, AES.MODE_ECB)
         encrypted_logs = cipher.encrypt(padded_logs_json)
         # Encode the encrypted logs to base64
-        encoded_encrypted_logs = base64.b64encode(encrypted_logs).decode("utf-8")
+        encoded_encrypted_logs = base64.b64encode(str(encrypted_logs).encode("utf-8"))
         return encoded_encrypted_logs
 
 # Example usage
