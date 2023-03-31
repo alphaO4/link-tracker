@@ -27,8 +27,8 @@ class encrypt():
         return encoded_encrypted_logs
 
 # Example usage
-logs = [{"ip": "192.168.1.1", "time": "2022-01-01T12:00:00", "user_agent": "Mozilla/5.0", 
-        "country": "US", "referer": "https://example.com", "redirect_url": "https://redirect.com"}]
-passphrase = "1234"
-encoded_encrypted_logs = encrypt.encrypt_logs(logs, passphrase)
+#logs = [{"ip": "192.168.1.1", "time": "2022-01-01T12:00:00", "user_agent": "Mozilla/5.0", 
+#        "country": "US", "referer": "https://example.com", "redirect_url": "https://redirect.com"}]
+#passphrase = "1234"
+#encoded_encrypted_logs = encrypt.encrypt_logs(logs, passphrase)
 #print(encoded_encrypted_logs)
