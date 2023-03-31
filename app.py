@@ -4,32 +4,84 @@ import hashlib
 import json
 import datetime
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from encrypt import encrypt
 from decrypt import decrypt
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
+import sqlite3
+import requests
+
+
 password = ""
 app = Flask(__name__)
 auth = HTTPBasicAuth()
-load_dotenv()
+load_dotenv(find_dotenv())
 
-#users = { "admin" : generate_password_hash(password) }
+api_key = os.getenv("API_KEY")
+print("Api Key " + str(api_key))
+# users = { "admin" : generate_password_hash(password) }
+
+
+
+# Connect to the database
+conn = sqlite3.connect("link-tracker.db", check_same_thread=False)
+cursor = conn.cursor()
+
+# Create the table to store lures
+cursor.execute(
+    """CREATE TABLE IF NOT EXISTS lures (
+    id INTEGER,
+    unique_key TEXT,
+    redirect_url TEXT,
+    PRIMARY KEY("id" AUTOINCREMENT)
+
+)"""
+)
+conn.commit()
+
+# Create the table to store access logs
+cursor.execute(
+    """CREATE TABLE IF NOT EXISTS accesslogs (
+    id INTEGER,
+    access_time TEXT,
+    ip TEXT,
+    user_agent TEXT,
+    device_typ TEXT,
+    country TEXT,
+    PRIMARY KEY("id" AUTOINCREMENT)
+)"""
+)
+conn.commit()
+
+# Create the table to store catch logs
+cursor.execute(
+    """CREATE TABLE IF NOT EXISTS catchlogs (
+    id INTEGER,
+    time TEXT,
+    ip TEXT,
+    user_agent TEXT,
+    country TEXT,
+    referer TEXT,
+    redirect_url TEXT,
+    count INTEGER,
+    lure TEXT,
+    PRIMARY KEY("id" AUTOINCREMENT)
+)"""
+)
+conn.commit()
+
+
 
 def load_lures():
-    try:
-        with open("lures.json", "r") as f:
-            return json.load(f)
-    except:
-        return []
+    cursor.execute("SELECT * FROM lures")
+    lures = cursor.fetchall()
+    print(lures)
+    return lures
 
 
 lures = load_lures()
 
-
-def save_lures(lures):
-    with open("lures.json", "w") as f:
-        json.dump(lures, f, indent=4)
 
 def get_decrypt_password(username):
     for user, password in users.items():
@@ -41,8 +93,10 @@ def get_decrypt_password(username):
 def get_country(ip):
     # get the api key from https://ipgeolocation.io/ and put it into a .env file
     API_KEY = os.getenv("API_KEY")
-    print(API_KEY)
-    response = requests.get(f"https://api.ipgeolocation.io/ipgeo?apiKey={API_KEY}&ip={ip}")
+    print("Api Key " + str(API_KEY))
+    response = requests.get(
+        f"https://api.ipgeolocation.io/ipgeo?apiKey={API_KEY}&ip={ip}"
+    )
     data = response.json()
     try:
         country = data["country_name"]
@@ -55,27 +109,38 @@ def create_lure(redirect_url):
     unique_key = hashlib.sha256(
         str(datetime.datetime.now().microsecond).encode()
     ).hexdigest()[:6]
-    lure = {"id": unique_key, "redirect_url": redirect_url}
-    lures.append(lure)
-    save_lures(lures)
+    cursor.execute("INSERT INTO lures (unique_key,redirect_url) VALUES (?, ?)", (str(unique_key), str(redirect_url)))
+    conn.commit()
     return unique_key
 
-
 def get_logs():
-    try:
-        with open("log.json", "r") as f:
-            logs = json.load(f)
-        return logs
-    except:
-        return []
-
+    cursor.execute("SELECT * FROM catchlogs")
+    logs = cursor.fetchall()
+    return logs
 
 def save_log(log):
-    logs = get_logs()
-    logs.append(log)
-    with open("log.json", "w") as f:
-        json.dump(logs, f, indent=4)
-
+    cursor.execute("SELECT count FROM catchlogs WHERE ip=? AND user_agent=?", (log["ip"], log["user_agent"]))
+    count = cursor.fetchone()
+    if count is not None:
+        cursor.execute(
+            "UPDATE catchlogs SET count=? WHERE ip=? AND user_agent=?",
+            (count[0] + 1, log["ip"], log["user_agent"]),
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO catchlogs (time, ip, user_agent, country, referer, redirect_url, count, lure) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                log["time"],
+                log["ip"],
+                log["user_agent"],
+                log["country"],
+                log["referer"],
+                log["redirect_url"],
+                log["count"],
+                log["lure"],
+            ),
+        )
+    conn.commit()
 
 @app.route("/add-lure", methods=["GET", "POST"])
 def add_lure():
@@ -93,13 +158,16 @@ def add_lure():
 
 
 @app.route("/<key>")
-@app.route("/lure/<key>")
+@app.route("/link/<key>")
 def lure(key):
-    lure = next((l for l in lures if l["id"] == key), None)
+    #get the lure from the database
+    cursor.execute("SELECT * FROM lures WHERE unique_key=?", (key,))
+    lure = cursor.fetchone()
+    print(lure)
     if lure is None:
         return "Invalid lure", 400
 
-    redirect_url = lure["redirect_url"]
+    redirect_url = lure[2]
     ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
     referer = request.headers.get("Referer")
@@ -111,8 +179,8 @@ def lure(key):
         "referer": str(encrypt.encrypt_logs(referer, password)),
         "redirect_url": str(encrypt.encrypt_logs(redirect_url, password)),
         "count": 1,
-        "lure" : str(encrypt.encrypt_logs(key, password)),
-        }
+        "lure": str(encrypt.encrypt_logs(key, password)),
+    }
     save_log(log)
 
     return redirect(redirect_url, code=302)
@@ -128,37 +196,38 @@ def index():
     # Use a third-party API to get the country of the IP
     country = get_country(ip)
     # Log the information
-    with open("log.txt", "a") as f:
-        f.write(f"{access_time} {ip} {user_agent} {device_type} {country}\n")
-
+    cursor.execute(
+        "INSERT INTO accesslogs (access_time, ip, user_agent, device_type, country) VALUES (?, ?, ?, ?, ?)",
+        (access_time, ip, user_agent, device_type, country),
+    )
+    conn.commit()
     return render_template("index.html")
 
-#users = { "admin" : generate_password_hash(password) }
 
 @auth.verify_password
 def verify_password(username, password):
     if username in users:
         return username
-        
 
 
 @app.route("/logs")
 @auth.login_required
 def logs():
     encrypted_logs = get_logs()
-    
+
     try:
-        #print("Here")        
+        # print("Here")
         password_d = get_decrypt_password(auth.current_user())
         decrypted_logs = decrypt.decrypt_logs(password_d)
 
         return render_template("logs.html", logs=decrypted_logs)
 
     except Exception as e:
-        print("Error log:",e)
+        print("Error log:", e)
         return "<h1> Hmm. Something went wrong. Please check the logs!</h1>"
 
+
 if __name__ == "__main__":
-   password = input("Password to encrypt logs with: ")
-   users = { "admin" : password }
-   app.run(host="0.0.0.0", debug = True)
+    password = input("Password to encrypt logs with: ")
+    users = {"admin": password}
+    app.run(host="0.0.0.0", debug=True)
