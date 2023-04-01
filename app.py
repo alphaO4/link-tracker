@@ -1,22 +1,24 @@
-from flask import Flask, request, render_template, redirect, jsonify
+from flask import Flask, request, render_template, redirect
 import requests
 import hashlib
-import json
 import datetime
 import os
 from dotenv import load_dotenv, find_dotenv
-from encrypt import encrypt
-from decrypt import decrypt
 from flask_httpauth import HTTPBasicAuth
-from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import requests
 import base64
+from cryptography.fernet import Fernet
+
 
 password = ""
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 load_dotenv(find_dotenv())
+
+
+#decrypt
+
 
 #Set base64 to encode
 encode = base64.b64encode
@@ -117,12 +119,12 @@ def create_lure(redirect_url):
     return unique_key
 
 def get_logs():
-    cursor.execute("SELECT * FROM catchlogs")
+    cursor.execute("SELECT time, ip, user_agent, country, referer, redirect_url, count, lure FROM catchlogs")
     logs = cursor.fetchall()
     return logs
 
 def save_log(log):
-    cursor.execute("SELECT count FROM catchlogs WHERE ip=? AND user_agent=?", (log["ip"], log["user_agent"]))
+    cursor.execute("SELECT count FROM catchlogs WHERE ip=? AND user_agent=?", (str(log["ip"]), str(log["user_agent"])))
     count = cursor.fetchone()
     if count is not None:
         cursor.execute(
@@ -173,16 +175,20 @@ def lure(key):
     redirect_url = lure[2]
     ip = request.remote_addr
     user_agent = request.headers.get("User-Agent")
-    referer = request.headers.get("Referer")
+    if request.headers.get("Referer") is None:
+        referer = ""
+    else:
+        referer = request.headers.get("Referer")
+        count = 0
     log = {
-        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "ip": encrypt.encrypt_logs(ip, password),
-        "user_agent": encrypt.encrypt_logs(user_agent, password),
-        "country": encrypt.encrypt_logs(get_country(ip), password),
-        "redirect_url": encrypt.encrypt_logs(redirect_url, password),
-        "referer": encrypt.encrypt_logs(referer, password),
-        "count": 1,
-        "lure": encrypt.encrypt_logs(key, password),
+        "time": fernet.encrypt(str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")).encode("utf-8")),
+        "ip": fernet.encrypt(ip.encode("utf-8")),
+        "user_agent": fernet.encrypt(user_agent.encode("utf-8")),
+        "country": fernet.encrypt(get_country(ip).encode("utf-8")),
+        "redirect_url": fernet.encrypt(redirect_url.encode("utf-8")),
+        "referer": fernet.encrypt(referer.encode("utf-8")),
+        "count": fernet.encrypt(count.to_bytes(4, byteorder='big')),
+        "lure": fernet.encrypt(key.encode("utf-8")),
     }
     save_log(log)
 
@@ -217,20 +223,29 @@ def verify_password(username, password):
 @auth.login_required
 def logs():
     encrypted_logs = get_logs()
-
-   # try:
-    # print("Here")
-    password_d = get_decrypt_password(auth.current_user())
-    decrypted_logs = decrypt.decrypt_logs(password_d, encrypted_logs)
-
+    decrypted_logs = fernet.decrypt(encrypted_logs)
     return render_template("logs.html", logs=decrypted_logs)
 
-  #  except Exception as e:
- #       print("Error log:", e)
-#        return "<h1> Hmm. Something went wrong. Please check the logs!</h1>"
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username == 'admin' and password == 'password':
+            # Redirect to the index page if the login is successful
+            return redirect('/')
+        else:
+            # Display an error message if the login is unsuccessful
+            return 'Invalid username or password'
+    else:
+        # Display the login form
+        return render_template('login.html')
 
 
 if __name__ == "__main__":
-    password = input("Password to encrypt logs with: ")
-    users = {"admin": password}
+    password = Fernet.generate_key()
+    print("Password: " + str(password) + " (Save this password for decrypting the logs)")
+    fernet = Fernet(password)
+    users = {"admin": fernet}
     app.run(host="0.0.0.0", debug=True, port=8080)
