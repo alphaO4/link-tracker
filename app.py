@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect
+from flask import Flask, request, render_template, redirect, jsonify
 import requests
 import hashlib
 import datetime
@@ -8,10 +8,12 @@ from flask_httpauth import HTTPBasicAuth
 import sqlite3
 import requests
 import base64
+import json
 from cryptography.fernet import Fernet
+from time import sleep
 
 
-password = ""
+password_g = Fernet.generate_key()
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 load_dotenv(find_dotenv())
@@ -69,8 +71,9 @@ cursor.execute(
     country TEXT,
     referer TEXT,
     redirect_url TEXT,
-    count INTEGER,
+    counting INTEGER,
     lure TEXT,
+    identifier TEXT,
     PRIMARY KEY("id" AUTOINCREMENT)
 )"""
 )
@@ -86,13 +89,6 @@ def load_lures():
 
 
 lures = load_lures()
-
-
-def get_decrypt_password(username):
-    for user, password in users.items():
-        if user == username:
-            return password
-    return None
 
 
 def get_country(ip):
@@ -119,21 +115,33 @@ def create_lure(redirect_url):
     return unique_key
 
 def get_logs():
-    cursor.execute("SELECT time, ip, user_agent, country, referer, redirect_url, count, lure FROM catchlogs")
-    logs = cursor.fetchall()
-    return logs
+    result_dict = {}
+    cursor.execute("SELECT time, ip, user_agent, country, referer, redirect_url, counting, lure FROM catchlogs")
+    # get the column names
+    columns = [col[0] for col in cursor.description]
+
+    # fetch all rows and convert to dictionary
+    result = []
+    for row in cursor.fetchall():
+        row_dict = {}
+        for i, value in enumerate(row):
+            row_dict[columns[i]] = value
+        result.append(row_dict)
+    return result
 
 def save_log(log):
-    cursor.execute("SELECT count FROM catchlogs WHERE ip=? AND user_agent=?", (str(log["ip"]), str(log["user_agent"])))
-    count = cursor.fetchone()
-    if count is not None:
+
+    cursor.execute("SELECT counting FROM catchlogs WHERE identifier=?", (str(log["identifier"]),))
+    counting = cursor.fetchone()
+    print("Counting: " + str(counting))
+    if counting is not None:
+        print("Counting: " + str(counting[0]))
         cursor.execute(
-            "UPDATE catchlogs SET count=? WHERE ip=? AND user_agent=?",
-            (count[0] + 1, log["ip"], log["user_agent"]),
+            "UPDATE catchlogs SET counting=? WHERE identifier=?", (counting[0] + 1, str(log["identifier"]),),
         )
     else:
         cursor.execute(
-            "INSERT INTO catchlogs (time, ip, user_agent, country, referer, redirect_url, count, lure) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO catchlogs (time, ip, user_agent, country, referer, redirect_url, counting, lure, identifier) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 log["time"],
                 log["ip"],
@@ -141,13 +149,15 @@ def save_log(log):
                 log["country"],
                 log["referer"],
                 log["redirect_url"],
-                log["count"],
+                log["counting"],
                 log["lure"],
+                log["identifier"],
             ),
         )
     conn.commit()
 
 @app.route("/add-lure", methods=["GET", "POST"])
+@auth.login_required
 def add_lure():
     if request.method == "POST":
         redirect_url = request.form.get("redirect_url")
@@ -179,23 +189,23 @@ def lure(key):
         referer = ""
     else:
         referer = request.headers.get("Referer")
-        count = 0
     log = {
-        "time": fernet.encrypt(str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")).encode("utf-8")),
+        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "ip": fernet.encrypt(ip.encode("utf-8")),
         "user_agent": fernet.encrypt(user_agent.encode("utf-8")),
         "country": fernet.encrypt(get_country(ip).encode("utf-8")),
         "redirect_url": fernet.encrypt(redirect_url.encode("utf-8")),
         "referer": fernet.encrypt(referer.encode("utf-8")),
-        "count": fernet.encrypt(count.to_bytes(4, byteorder='big')),
+        "counting": 1,
         "lure": fernet.encrypt(key.encode("utf-8")),
+        "identifier": hashlib.sha256(ip.encode("utf-8")+key.encode("utf-8")).hexdigest(),
     }
     save_log(log)
 
     return redirect(redirect_url, code=302)
 
-
 @app.route("/")
+@auth.login_required
 def index():
     # Get information from the client's request
     access_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -215,37 +225,32 @@ def index():
 
 @auth.verify_password
 def verify_password(username, password):
-    if username in users:
-        return username
+    if username == 'admin' and password_g.decode("utf-8") == password:
+        return True
 
 
 @app.route("/logs")
 @auth.login_required
 def logs():
     encrypted_logs = get_logs()
-    decrypted_logs = fernet.decrypt(encrypted_logs)
+    decrypted_logs=[]
+    for log in encrypted_logs:
+        decrypted_log = {}
+        for field in log:
+            if field in ["time", "counting"]:
+                decrypted_log[field] = log[field]
+            else:
+                # print(field)
+                # print(log[field])
+                decrypted_log[field] = fernet.decrypt(log[field]).decode("utf-8")
+                # print("Decrypted: " + decrypted_log[field])
+        decrypted_logs.append(decrypted_log)
+    #print("Decrypted_logs:",decrypted_logs)
     return render_template("logs.html", logs=decrypted_logs)
 
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        if username == 'admin' and password == 'password':
-            # Redirect to the index page if the login is successful
-            return redirect('/')
-        else:
-            # Display an error message if the login is unsuccessful
-            return 'Invalid username or password'
-    else:
-        # Display the login form
-        return render_template('login.html')
-
-
 if __name__ == "__main__":
-    password = Fernet.generate_key()
-    print("Password: " + str(password) + " (Save this password for decrypting the logs)")
-    fernet = Fernet(password)
+    print("Password: " + password_g.decode("utf-8") + " (Save this password for decrypting the logs)")
+    fernet = Fernet(password_g)
     users = {"admin": fernet}
     app.run(host="0.0.0.0", debug=True, port=8080)

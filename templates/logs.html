@@ -42,12 +42,12 @@
         {% for log in logs %}
         <tr>
             <td>{{ log.ip.strip('"') }}</td>
-            <td>{{ log.time }}</td>
+            <td>{{ log.time.strip('"') }}</td>
             <td>{{ log.user_agent.strip('"') }}</td>
             <td>{{ log.country.strip('"') }}</td>
             <td>{{ log.referer.strip('"') }}</td>
             <td>{{ log.redirect_url.strip('"') }}</td>
-            <td>{{ log.count }} </td>
+            <td>{{ log.counting }} </td>
             <td><a href=http://alpha04.uber.space/{{ log.lure.strip('"') }}>http://alpha04.uber.space/{{ log.lure.strip('"') }}</td>
         </tr>
         {% endfor %}
